@@ -1,0 +1,2 @@
+# SnakeGame
+I want to improve my programming abilities, so I decided make some small projects to review something that I know and to learn things that I don't know. For this first project, I will try to create by my self a Snake Game (the classic version). It is a game that I really liked when I was a child and I think that it will be a funny experience. For this project I will use just C and the library SDL2.0 (https://www.libsdl.org/).
