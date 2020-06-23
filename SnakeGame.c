@@ -1,11 +1,17 @@
 //Include SDL.h
 #include <SDL.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <stdbool.h>
 
 //Screen dimension constants
 const int SCREEN_WIDTH = 640;
 const int SCREEN_HEIGHT = 480;
+
+//Game functions
+void UpdateRect(SDL_Rect* rect, SDL_Renderer* renderer);
+void CreateRect(SDL_Rect* rect, int x, int y, int w, int h);
+int Random(int min, int max);
 
 //Required main to SDL
 int main(int argc, char* args[])
@@ -17,6 +23,10 @@ int main(int argc, char* args[])
     //Ptr to the renderer in the window
     SDL_Renderer* screenRenderer = NULL;
     bool exit = false;
+    srand(time(NULL));
+    //First call to rand() doesn't seem to be random at all, 
+    //so we're calling it here in an attempt to make next calls less deterministic
+    rand();
 
     //Init SDL just with SDL's video subsystem
     if (SDL_Init(SDL_INIT_VIDEO) < 0)
@@ -37,10 +47,9 @@ int main(int argc, char* args[])
             screenSurface = SDL_GetWindowSurface(window);
             screenRenderer = SDL_CreateRenderer(window,-1,0);
             SDL_Rect snake;
-            snake.x = SCREEN_WIDTH/2;
-            snake.y = SCREEN_HEIGHT/2;
-            snake.w = 15;
-            snake.h = 15;
+            SDL_Rect food;
+            CreateRect(&snake, SCREEN_WIDTH/2, SCREEN_HEIGHT/2, 15, 15);
+            CreateRect(&food, Random(0, SCREEN_WIDTH - 5), Random(0, SCREEN_HEIGHT - 5), 5, 5);
             //Fill enitre surface (NULL) with solid color
             SDL_FillRect(screenSurface, NULL, SDL_MapRGB(screenSurface->format, 0x0,0x0,0x0));
             //Update the surface
@@ -89,12 +98,16 @@ int main(int argc, char* args[])
                             }
                             break;
                     }
+                    if (SDL_HasIntersection(&snake, &food))
+                    {
+                        food.x = Random(0, SCREEN_WIDTH - 5);
+                        food.y = Random(0, SCREEN_HEIGHT - 5);
+                    }
                 }
                 SDL_SetRenderDrawColor(screenRenderer, 0x00, 0x00, 0x00, 0xFF);
                 SDL_RenderClear(screenRenderer);
-                SDL_SetRenderDrawColor(screenRenderer, 0xFF, 0xFF, 0xFF, 0xFF);
-                SDL_RenderFillRect(screenRenderer, &snake);
-                SDL_RenderDrawRect(screenRenderer, &snake);
+                UpdateRect(&snake, screenRenderer);
+                UpdateRect(&food, screenRenderer);
                 SDL_RenderPresent(screenRenderer);
             }
         }
@@ -108,4 +121,24 @@ int main(int argc, char* args[])
     SDL_Quit();
 
     return 0;
+}
+//TODO: Use SDL_Color structure to receive background color and rect color
+void UpdateRect(SDL_Rect* rect, SDL_Renderer* renderer)
+{
+    SDL_SetRenderDrawColor(renderer, 0xFF, 0xFF, 0xFF, 0xFF);
+    SDL_RenderFillRect(renderer, rect);
+    SDL_RenderDrawRect(renderer, rect);
+}
+
+void CreateRect(SDL_Rect* rect, int x, int y, int w, int h)
+{
+    rect->x = x;
+    rect->y = y;
+    rect->w = w;
+    rect->h = h;
+}
+
+int Random(int min, int max)
+{
+    return (int)((max + 1 - min)*((float)rand()/RAND_MAX) + min );
 }
