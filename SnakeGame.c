@@ -7,7 +7,7 @@
 //Screen dimension constants
 const int SCREEN_WIDTH = 640;
 const int SCREEN_HEIGHT = 480;
-int gameVel = 240;
+int GAME_VEL = 240;
 
 //Enums
 enum Direction
@@ -29,6 +29,7 @@ struct node {
 
 //Game functions
 int Random(int min, int max);
+void DealWithEvents(enum Direction* currDir, bool* exit);
 SDL_Rect CreateRect(int x, int y, int w, int h);
 void UpdateRect(SDL_Rect* rect, SDL_Renderer* renderer);
 Node* CreateSnake();
@@ -54,7 +55,7 @@ int main(int argc, char* args[])
     else
     {
         // printf("Game velocity (suggested 240, > -> slow): ");
-        // scanf("%d", &gameVel);
+        // scanf("%d", &GAME_VEL);
         //Create window
         window = SDL_CreateWindow("Snake Game", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, SCREEN_WIDTH, SCREEN_HEIGHT, SDL_WINDOW_SHOWN);
         if (window == NULL)
@@ -63,6 +64,7 @@ int main(int argc, char* args[])
         }
         else
         {
+            //TODO: Add quit check here
             newGame(&window);
         }
     }
@@ -79,6 +81,38 @@ int main(int argc, char* args[])
 int Random(int min, int max)
 {
     return (int)((max + 1 - min)*((float)rand()/RAND_MAX) + min );
+}
+
+void DealWithEvents(enum Direction* currDir, bool* exit)
+{
+    SDL_Event event;
+    if (SDL_PollEvent(&event))
+    {
+        switch (event.type)
+        {
+            case SDL_QUIT:
+                *exit = true;
+                break;
+            case SDL_KEYDOWN:;
+                SDL_Keysym keysym = event.key.keysym;
+                switch (keysym.scancode)
+                {
+                    case SDL_SCANCODE_DOWN:
+                        *currDir = *currDir == UP ? UP:DOWN;
+                        break;
+                    case SDL_SCANCODE_LEFT:
+                        *currDir = *currDir == RIGHT ? RIGHT : LEFT;
+                        break;
+                    case SDL_SCANCODE_RIGHT:
+                        *currDir = *currDir == LEFT ? LEFT : RIGHT;
+                        break;
+                    case SDL_SCANCODE_UP:
+                        *currDir = *currDir == DOWN ? DOWN:UP;
+                        break;
+                }
+                break;
+        }
+    }
 }
 
 SDL_Rect CreateRect(int x, int y, int w, int h)
@@ -199,46 +233,19 @@ void newGame(SDL_Window** windowPtr)
         }
         //Frame count
         frame++;
-        if (frame == gameVel)
+        if (frame == GAME_VEL)
         {
             frame = 0;
-        }
-        if (frame == 1)
-        {
             UpdateSnake(&head, currDir, &exit);
         }
         if (head->rect.y > (SCREEN_HEIGHT - head->rect.h) || head->rect.y < 0 || head->rect.x > (SCREEN_WIDTH - head->rect.w) || head->rect.x < 0)
         {
             exit = true;
         }
-        SDL_Event event;
-        if (SDL_PollEvent(&event))
-        {
-            switch (event.type)
-            {
-                case SDL_QUIT:
-                    exit = true;
-                    break;
-                case SDL_KEYDOWN:;
-                    SDL_Keysym keysym = event.key.keysym;
-                    switch (keysym.scancode)
-                    {
-                        case SDL_SCANCODE_DOWN:
-                            currDir = currDir == UP ? UP:DOWN;
-                            break;
-                        case SDL_SCANCODE_LEFT:
-                            currDir = currDir == RIGHT ? RIGHT : LEFT;
-                            break;
-                        case SDL_SCANCODE_RIGHT:
-                            currDir = currDir == LEFT ? LEFT : RIGHT;
-                            break;
-                        case SDL_SCANCODE_UP:
-                            currDir = currDir == DOWN ? DOWN:UP;
-                            break;
-                    }
-                    break;
-            }
-        }
+
+        //Deal with events
+        DealWithEvents(&currDir, &exit);
+        
         SDL_SetRenderDrawColor(screenRenderer, 0x00, 0x00, 0x00, 0xFF);
         SDL_RenderClear(screenRenderer);
         Node* aux = head;
