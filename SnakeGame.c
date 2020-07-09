@@ -22,8 +22,6 @@ enum Direction
 struct node {
     SDL_Rect rect;
     int pos;
-    int lastX;
-    int lastY;
     struct node* next;
 } typedef Node;
 
@@ -33,8 +31,8 @@ void DealWithEvents(enum Direction* currDir, bool* exit);
 SDL_Rect CreateRect(int x, int y, int w, int h);
 void UpdateRect(SDL_Rect* rect, SDL_Renderer* renderer);
 Node* CreateSnake();
-void UpdateSnake(Node** headPtr, enum Direction currDir, bool* exitPtr);
-void AddNode(Node** head);
+void UpdateSnake(Node** headPtr, Node** tail, enum Direction currDir, bool* exitPtr);
+void AddNode(Node** head, Node** tail);
 void newGame(SDL_Window** windowPtr);
 
 //Required main to SDL
@@ -141,14 +139,14 @@ Node* CreateSnake()
     head->next = NULL;
     head->pos = 0;
     head->rect = CreateRect(SCREEN_WIDTH/2, SCREEN_HEIGHT/2, 15, 15);
-    head->lastX = head->rect.x;
-    head->lastY = head->rect.y;
     return head;
 }
 
-void UpdateSnake(Node** headPtr, enum Direction currDir, bool* exitPtr)
+void UpdateSnake(Node** headPtr, Node** tailPtr, enum Direction currDir, bool* exitPtr)
 {
+    Node* aux = *headPtr;
     int dx = 0, dy = 0;
+
     switch(currDir)
     {
         case UP:
@@ -164,35 +162,33 @@ void UpdateSnake(Node** headPtr, enum Direction currDir, bool* exitPtr)
             dx = +15;
             break;
     }
-
-    Node* aux = (*headPtr)->next;
-    (*headPtr)->lastX = (*headPtr)->rect.x;
-    (*headPtr)->lastY = (*headPtr)->rect.y;
-    (*headPtr)->rect.x += dx;
-    (*headPtr)->rect.y += dy;
-    int lastX = (*headPtr)->lastX;
-    int lastY = (*headPtr)->lastY;
-
-    while(aux != NULL)
+    if (*headPtr == *tailPtr)
     {
-        if (SDL_HasIntersection(&((*headPtr)->rect), &(aux->rect)))
+        (*headPtr)->rect.x += dx;
+        (*headPtr)->rect.y += dy;
+        return;
+    }
+    while(aux->next != *tailPtr)
+    {
+        if (SDL_HasIntersection(&((*headPtr)->rect), &(aux->next->rect)))
         {
             *exitPtr = true;
         }
-        aux->lastX = aux->rect.x;
-        aux->lastY = aux->rect.y;
-        aux->rect.x = lastX;
-        aux->rect.y = lastY;
-        lastX = aux->lastX;
-        lastY = aux->lastY;
         aux = aux->next;
     }
+        (*tailPtr)->next = *headPtr;
+        aux->next = NULL;
+        (*tailPtr)->rect.x = (*headPtr)->rect.x + dx;
+        (*tailPtr)->rect.y = (*headPtr)->rect.y + dy;
+        *headPtr = *tailPtr;
+        *tailPtr = aux;
 }
 
-void AddNode(Node** head)
+void AddNode(Node** head, Node** tail)
 {
     Node* newNode = (Node*)malloc(sizeof(Node));
     Node* aux = *head;
+    *tail = newNode;
     newNode->next = NULL;
     while(aux->next != NULL)
     {
@@ -200,10 +196,8 @@ void AddNode(Node** head)
     }
     //printf("pos %d\n", aux->pos);
     aux->next = newNode;
-    newNode->lastX = 0;
-    newNode->lastY = 0;
     newNode->pos = aux->pos + 1;
-    newNode->rect = CreateRect(aux->lastX, aux->lastY, 15, 15);
+    newNode->rect = CreateRect(aux->rect.x, aux->rect.y, 15, 15);
 }
 
 void newGame(SDL_Window** windowPtr)
@@ -216,6 +210,7 @@ void newGame(SDL_Window** windowPtr)
     SDL_FillRect(screenSurface, NULL, SDL_MapRGB(screenSurface->format, 0x0,0x0,0x0));
     
     Node* head = CreateSnake();
+    Node* tail = head;
     SDL_Rect food = CreateRect(Random(0, SCREEN_WIDTH - 5), Random(0, SCREEN_HEIGHT - 5), 5, 5);
     enum Direction currDir = RIGHT;
     int frame = 0;
@@ -229,14 +224,14 @@ void newGame(SDL_Window** windowPtr)
         {
             food.x = Random(0, SCREEN_WIDTH - 5);
             food.y = Random(0, SCREEN_HEIGHT - 5);
-            AddNode(&head);
+            AddNode(&head, &tail);
         }
         //Frame count
         frame++;
         if (frame == GAME_VEL)
         {
             frame = 0;
-            UpdateSnake(&head, currDir, &exit);
+            UpdateSnake(&head, &tail, currDir, &exit);
         }
         if (head->rect.y > (SCREEN_HEIGHT - head->rect.h) || head->rect.y < 0 || head->rect.x > (SCREEN_WIDTH - head->rect.w) || head->rect.x < 0)
         {
